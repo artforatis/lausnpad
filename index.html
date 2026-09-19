@@ -1,0 +1,1199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Launchpad | Robinhood Chain</title>
+<meta name="description" content="Create and trade tokens on Robinhood Chain.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233D4BFF'/%3E%3Cpath d='M6 25 C 14 24, 20 19, 26 7' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.16.0/dist/ethers.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F2F3FA;--surface:#FFFFFF;--surface-2:#E9EBF7;--ink:#16183B;--muted:#5E6286;--line:#D9DCEE;
+  --accent:#3D4BFF;--accent-ink:#FFFFFF;--accent-soft:#E3E6FF;--buy:#0E9F6E;--sell:#E5484D;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r-lg:22px;--r-md:14px;--r-sm:10px;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0D0F2E;--surface:#161942;--surface-2:#1E2256;--ink:#EEF0FF;--muted:#9A9EC8;--line:#2A2E66;
+  --accent:#7F89FF;--accent-ink:#0D0F2E;--accent-soft:#252A6B;--buy:#2BD49A;--sell:#FF6B6F}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit}
+img{max-width:100%;display:block}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.num{font-variant-numeric:tabular-nums}
+
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:20px;padding:14px clamp(16px,4vw,40px);background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:-.01em}
+.mark{width:32px;height:32px;border-radius:9px;background:var(--accent);display:grid;place-items:center;flex:none}
+.mark svg{width:22px;height:22px}
+nav.main{display:flex;gap:4px;margin-left:8px}
+nav.main a{text-decoration:none;padding:8px 14px;border-radius:999px;font-weight:600;color:var(--muted)}
+nav.main a:hover{color:var(--ink)}
+nav.main a.on{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.wallet-area{margin-left:auto;position:relative}
+
+.btn{appearance:none;border:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;text-decoration:none;border-radius:999px;padding:10px 18px;background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);transition:transform .08s ease}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:var(--accent-ink);box-shadow:none}
+.btn.buy{background:var(--buy);color:#fff;box-shadow:none}
+.btn.sell{background:var(--sell);color:#fff;box-shadow:none}
+.btn.big{padding:15px 26px;font-size:17px}
+.btn.wide{width:100%}
+.chip{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 14px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;border:0;font-weight:700}
+.chip .addr{background:var(--surface-2);padding:4px 10px;border-radius:999px;font-size:14px}
+.menu{position:absolute;right:0;top:calc(100% + 8px);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:6px;min-width:210px;box-shadow:0 18px 40px -18px rgba(10,12,40,.35)}
+.menu button,.menu a{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 12px;border-radius:8px;cursor:pointer;text-decoration:none;font-weight:600}
+.menu button:hover,.menu a:hover{background:var(--surface-2)}
+
+main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding:clamp(20px,4vw,44px) clamp(16px,4vw,40px) 60px}
+
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:center;margin-bottom:48px}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,5.6vw,68px);line-height:1.02;letter-spacing:-.03em;margin:0 0 18px}
+.hero p{font-size:19px;color:var(--muted);max-width:34ch;margin:0 0 28px}
+.hero-actions{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.stat-line{color:var(--muted);font-weight:600}
+.stat-line b{font-family:var(--display);color:var(--ink);font-size:22px;margin-right:6px}
+.curve-art{width:100%;height:auto;overflow:visible}
+.curve-art .path{fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;stroke-dasharray:900;stroke-dashoffset:900;animation:draw 1.8s .2s cubic-bezier(.6,.1,.2,1) forwards}
+.curve-art .dot{fill:var(--accent);opacity:0;animation:pop .4s 1.9s forwards}
+.curve-art .grid-l{stroke:var(--line);stroke-width:1}
+.curve-art .area{fill:var(--accent-soft);opacity:0;animation:fade .8s 1.2s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes pop{to{opacity:1}}
+@keyframes fade{to{opacity:.9}}
+@media (prefers-reduced-motion:reduce){.curve-art .path{animation:none;stroke-dashoffset:0}.curve-art .dot,.curve-art .area{animation:none;opacity:1}}
+
+.list-head{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.list-head h2{font-family:var(--display);font-size:26px;margin:0;letter-spacing:-.02em}
+.tools{display:flex;gap:10px;flex-wrap:wrap}
+.tools input,.tools select{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:10px 16px;min-width:0}
+.tools input{width:min(340px,70vw)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.card{display:flex;flex-direction:column;background:var(--surface);border-radius:var(--r-lg);text-decoration:none;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.card:hover .thumb img{transform:scale(1.03)}
+.thumb{aspect-ratio:1/1;background:var(--surface-2);overflow:hidden}
+.thumb img,.t-img img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.ph{width:100%;height:100%;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:44px;color:#fff}
+.card-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:4px;flex:1}
+.card-name{font-weight:800;font-size:17px;line-height:1.25;overflow-wrap:anywhere}
+.card-sym{color:var(--accent);font-weight:700;font-size:14px;overflow-wrap:anywhere}
+.card-desc{color:var(--muted);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-foot{margin-top:auto;padding-top:10px;display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);font-weight:600}
+.card-foot b{color:var(--ink)}
+.skel{background:linear-gradient(90deg,var(--surface) 0,var(--surface-2) 50%,var(--surface) 100%);background-size:200% 100%;animation:sh 1.2s infinite;border-radius:var(--r-lg);min-height:330px}
+@keyframes sh{to{background-position:-200% 0}}
+.more{display:flex;justify-content:center;margin-top:24px}
+.empty{padding:48px 24px;text-align:center;background:var(--surface);border-radius:var(--r-lg);box-shadow:inset 0 0 0 1px var(--line);color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:18px;margin-bottom:6px}
+
+.page-title{font-family:var(--display);font-weight:800;font-size:clamp(28px,4vw,40px);letter-spacing:-.03em;margin:0 0 6px}
+.lede{color:var(--muted);margin:0 0 28px}
+.create{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:40px;align-items:start}
+form{display:flex;flex-direction:column;gap:20px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{display:flex;flex-direction:column;gap:7px}
+.field>span,.legend{font-weight:700;font-size:15px}
+.field input,.field textarea,.links input{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;width:100%}
+.field textarea{min-height:96px;resize:vertical}
+.field input:focus,.field textarea:focus,.links input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.hint{color:var(--muted);font-size:13px}
+.hint.err{color:var(--sell);font-weight:600}
+.drop{position:relative;border:2px dashed var(--line);border-radius:var(--r-md);background:var(--surface);padding:18px;display:flex;gap:16px;align-items:center;cursor:pointer}
+.drop:hover,.drop:focus-within{border-color:var(--accent)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.drop-thumb{width:64px;height:64px;border-radius:12px;background:var(--surface-2);flex:none;overflow:hidden;display:grid;place-items:center;color:var(--muted);font-size:26px}
+.drop-thumb img{width:100%;height:100%;object-fit:cover}
+.drop b{display:block}
+.drop small{color:var(--muted)}
+.links{border:0;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.links legend{margin-bottom:10px;padding:0}
+.links label{display:flex;flex-direction:column;gap:5px;font-size:14px;font-weight:600;color:var(--muted)}
+.fee-row{display:flex;align-items:center;gap:14px}
+input[type=range]{flex:1;accent-color:var(--accent);padding:0;border:0;background:none}
+.fee-val{font-family:var(--display);font-weight:700;font-size:22px;min-width:64px;text-align:right}
+.inline{display:flex;gap:8px;align-items:center}
+.unit{font-weight:700;color:var(--muted)}
+.fine{color:var(--muted);font-size:13px;margin:0}
+.preview{position:sticky;top:96px}
+.preview .card{pointer-events:none}
+.side-note{margin-top:16px;padding:16px;border-radius:var(--r-md);background:var(--accent-soft);font-size:14px}
+.side-note b{display:block;margin-bottom:4px}
+
+.token{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:28px;align-items:start}
+.t-head{display:flex;gap:20px;align-items:center;margin-bottom:22px}
+.t-img{width:104px;height:104px;border-radius:24px;overflow:hidden;background:var(--surface-2);flex:none}
+.t-img .ph{font-size:40px}
+.t-head h1{font-family:var(--display);font-weight:800;font-size:clamp(26px,4vw,40px);letter-spacing:-.03em;margin:0;line-height:1.1;overflow-wrap:anywhere}
+.t-sym{color:var(--accent);font-weight:800;margin:2px 0 10px;overflow-wrap:anywhere}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);text-decoration:none;border:0;cursor:pointer}
+.pill:hover{box-shadow:inset 0 0 0 1px var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-radius:var(--r-md);overflow:hidden;margin-bottom:20px;box-shadow:0 0 0 1px var(--line)}
+.stats div{background:var(--surface);padding:14px 16px}
+.stats small{display:block;color:var(--muted);font-weight:600;font-size:13px}
+.stats b{font-size:18px;font-weight:800}
+.stats em{display:block;font-style:normal;color:var(--muted);font-size:12px;min-height:18px}
+.panel{background:var(--surface);border-radius:var(--r-lg);padding:20px;box-shadow:inset 0 0 0 1px var(--line);margin-bottom:20px}
+.panel h3{margin:0 0 12px;font-size:17px;font-weight:800}
+.chart{width:100%;height:200px;display:block}
+.chart .ln{fill:none;stroke:var(--accent);stroke-width:2.5;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.chart .ar{fill:var(--accent-soft)}
+.chart-meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-top:6px}
+dl.meta{display:grid;grid-template-columns:auto 1fr;gap:8px 18px;margin:14px 0 0;font-size:14px}
+dl.meta dt{color:var(--muted);font-weight:600}
+dl.meta dd{margin:0;overflow-wrap:anywhere;font-weight:600}
+.desc{white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline}
+table.trades{width:100%;border-collapse:collapse;font-size:14px;min-width:460px}
+.trades th{text-align:left;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+.trades td{padding:9px 8px;border-bottom:1px solid var(--line)}
+.trades tr:last-child td{border-bottom:0}
+.tbl-wrap{overflow-x:auto}
+.b{color:var(--buy);font-weight:800}.s{color:var(--sell);font-weight:800}
+
+.trade-box{position:sticky;top:96px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:999px;padding:4px;margin-bottom:18px}
+.tabs button{border:0;background:none;padding:10px;border-radius:999px;font-weight:800;cursor:pointer;color:var(--muted)}
+.tabs button.on[data-side=buy]{background:var(--buy);color:#fff}
+.tabs button.on[data-side=sell]{background:var(--sell);color:#fff}
+.amt{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);padding:6px 14px}
+.amt input{flex:1;min-width:0;border:0;background:none;font-size:26px;font-weight:800;padding:8px 0;outline:none}
+.amt .unit{font-size:15px}
+.quick{display:flex;gap:6px;margin:10px 0 16px;flex-wrap:wrap}
+.quick button{flex:1;border:0;background:var(--surface-2);padding:8px 6px;border-radius:999px;font-weight:700;font-size:13px;cursor:pointer}
+.quick button:hover{background:var(--accent-soft)}
+.est{display:flex;flex-direction:column;gap:6px;font-size:14px;margin-bottom:16px}
+.est div{display:flex;justify-content:space-between;gap:10px}
+.est span{color:var(--muted)}
+.est span.s{color:var(--sell)}
+.est b{text-align:right}
+.slip{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:16px}
+.slip input{width:64px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 8px;text-align:right}
+.bal{font-size:13px;color:var(--muted);margin-top:12px;display:flex;justify-content:space-between;gap:8px}
+
+.big-num{font-family:var(--display);font-weight:800;font-size:clamp(28px,5vw,44px);letter-spacing:-.02em;margin:4px 0 14px}
+
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(8,10,35,.55)}
+.modal[hidden]{display:none}
+.modal-card{background:var(--surface);border-radius:var(--r-lg);width:min(420px,100%);padding:22px;max-height:90vh;overflow:auto}
+.modal-card h2{margin:0 0 4px;font-size:20px;font-weight:800}
+.modal-card p{color:var(--muted);margin:0 0 16px;font-size:14px}
+.wlist{display:flex;flex-direction:column;gap:8px}
+.wopt{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--bg);cursor:pointer;font-weight:700;text-align:left;width:100%}
+.wopt:hover{border-color:var(--accent)}
+.wopt img,.wopt .wph{width:32px;height:32px;border-radius:8px;flex:none;background:var(--surface-2)}
+.modal-x{float:right;border:0;background:var(--surface-2);width:34px;height:34px;border-radius:999px;cursor:pointer;font-size:18px}
+
+#toasts{position:fixed;right:16px;bottom:16px;z-index:60;display:flex;flex-direction:column;gap:8px;max-width:min(380px,calc(100vw - 32px))}
+.toast{background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:var(--r-md);font-weight:600;font-size:14px;box-shadow:0 12px 30px -12px rgba(0,0,0,.5);border-left:5px solid var(--accent)}
+.toast.ok{border-left-color:var(--buy)}
+.toast.err{border-left-color:var(--sell)}
+.toast a{color:inherit;display:inline-block;margin-top:4px}
+
+footer{border-top:1px solid var(--line);padding:22px clamp(16px,4vw,40px);color:var(--muted);font-size:13px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+footer a{font-weight:700}
+
+@media (max-width:900px){
+  .hero,.create,.token{grid-template-columns:1fr}
+  .hero .curve-wrap{order:-1;max-width:420px}
+  .preview,.trade-box{position:static}
+  .token .trade-box{order:-1}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:620px){
+  .top{gap:10px;flex-wrap:wrap}
+  nav.main{order:3;width:100%;margin:0}
+  nav.main a{flex:1;text-align:center}
+  .row2,.links{grid-template-columns:1fr}
+  .t-img{width:76px;height:76px;border-radius:18px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a href="#/" class="brand"><span class="mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20 C 10 19, 15 15, 21 4" stroke="white" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg></span><span id="brandName">Launchpad</span></a>
+  <nav class="main" aria-label="Main">
+    <a href="#/" data-nav="home">Tokens</a>
+    <a href="#/create" data-nav="create">Create</a>
+    <a href="#/earnings" data-nav="earnings">Earnings</a>
+  </nav>
+  <div class="wallet-area" id="walletArea"></div>
+</header>
+
+<main id="app"></main>
+
+<footer>
+  <span>Anyone can create a token here. Trading is risky, so check a project before you buy.</span>
+  <span>Robinhood Chain · <a id="contractLink" target="_blank" rel="noopener noreferrer">Contract</a></span>
+</footer>
+
+<div class="modal" id="walletModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="wmTitle">
+    <button class="modal-x" id="wmClose" aria-label="Close">×</button>
+    <h2 id="wmTitle">Connect a wallet</h2>
+    <p>Pick any wallet installed in your browser. Connecting never asks you to sign a message.</p>
+    <div class="wlist" id="wlist"></div>
+  </div>
+</div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+const CONFIG = {
+  siteName: "Launchpad",
+  contract: "0x586447fA77054909630C8E5790216b0bD7d03Df5",
+  chainId: 4663,
+  chainName: "Robinhood Chain",
+  explorer: "https://robinhoodchain.blockscout.com",
+  walletRpc: "https://rpc.mainnet.chain.robinhood.com",
+  rpcs: [
+    "https://robinhood-mainnet.g.alchemy.com/v2/alch_Ndk6ILf93LlGhR2tHXjti",
+    "https://robinhood-mainnet.g.alchemy.com/v2/alch_0HNVu2BHAGapBjeVumBzk",
+    "https://robinhood-mainnet.g.alchemy.com/v2/alch_ox8kwqEL5Zm65Ypwv-1Ac",
+    "https://robinhood-mainnet.g.alchemy.com/v2/alch_k9jJdhVKPkyPltmA3bE0R",
+    "https://robinhood-mainnet.g.alchemy.com/v2/alch_RlpQydh8QIsUXriQ9cLgP",
+    "https://robinhood-mainnet.g.alchemy.com/v2/alch_TXqz17s-PtL4sjnYRDZVG",
+    "https://robinhood-mainnet.g.alchemy.com/v2/alch_Q6Am_eRKyv7DpDVeXUopp",
+    "https://robinhood-mainnet.g.alchemy.com/v2/alch_RHX7FBExf8pVrwkbwfodI",
+    "https://robinhood-mainnet.g.alchemy.com/v2/alch_z_uMMdPTlQwz16N_Iizv1",
+    "https://robinhood-mainnet.g.alchemy.com/v2/alch_GEzcaPj7v0QyDMKdl0Q9u",
+    "https://rpc.mainnet.chain.robinhood.com"
+  ],
+  pinataJwt: "",
+  ipfsGateways: ["https://ipfs.io/ipfs/", "https://gateway.pinata.cloud/ipfs/", "https://dweb.link/ipfs/"],
+  maxImageMB: 5,
+  defaultSlippage: 5,
+  pageSize: 24
+};
+
+const LP_ABI = [
+  "function createToken((string name,string symbol,string image,string description,string x,string telegram,string discord,string website,string xPost) info,uint16 creatorFeeBps,uint256 minTokensOut) payable returns (address)",
+  "function buy(address token,uint256 minTokensOut) payable",
+  "function sell(address token,uint256 amount,uint256 minEthOut)",
+  "function claimCreatorFees()",
+  "function claimPlatformFees()",
+  "function getInfo(address token) view returns ((string name,string symbol,string image,string description,string x,string telegram,string discord,string website,string xPost))",
+  "function pools(address) view returns (address creator,uint16 creatorFeeBps,uint256 vEth,uint256 vToken,uint256 realEth,uint256 createdAt)",
+  "function tokenCount() view returns (uint256)",
+  "function getTokens(uint256 start,uint256 count) view returns (address[])",
+  "function creatorFeesOwed(address) view returns (uint256)",
+  "function platformFeesOwed() view returns (uint256)",
+  "function feeWallet() view returns (address)",
+  "function owner() view returns (address)",
+  "function virtualEthStart() view returns (uint256)",
+  "event TokenCreated(address indexed token,address indexed creator,string name,string symbol,uint16 creatorFeeBps)",
+  "event Trade(address indexed token,address indexed trader,bool isBuy,uint256 ethAmount,uint256 tokenAmount,uint256 vEth,uint256 vToken)"
+];
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function allowance(address owner,address spender) view returns (uint256)",
+  "function approve(address spender,uint256 amount) returns (bool)"
+];
+
+const SUPPLY = 10n ** 27n;
+const MAX_LAUNCH_BUY = SUPPLY / 5n;
+const BPS = 10000n;
+const PLATFORM_BPS = 500n;
+const FROM_CREATOR_BPS = 300n;
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const app = $("#app");
+const state = { wallet: null, account: null, chainOk: false, ethUsd: null, vStart: null, list: null, timer: null, handlers: null };
+const walletMap = new Map();
+let iface, net, providers, rpcIndex = 0;
+
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function short(a) { return a ? a.slice(0, 6) + "…" + a.slice(-4) : ""; }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function store(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+function tiny(n) {
+  const s = n.toFixed(30);
+  const m = s.match(/^0\.(0+)(\d{1,4})/);
+  if (!m) return n.toExponential(2);
+  const sub = "₀₁₂₃₄₅₆₇₈₉";
+  return "0.0" + String(m[1].length).split("").map(c => sub[c]).join("") + (m[2].replace(/0+$/, "") || "0");
+}
+function num(n) {
+  if (!isFinite(n)) return "–";
+  const a = Math.abs(n);
+  if (a === 0) return "0";
+  if (a >= 1e12) return (n / 1e12).toFixed(2) + "T";
+  if (a >= 1e9) return (n / 1e9).toFixed(2) + "B";
+  if (a >= 1e6) return (n / 1e6).toFixed(2) + "M";
+  if (a >= 1e4) return (n / 1e3).toFixed(1) + "K";
+  if (a >= 1) return n.toLocaleString("en-US", { maximumFractionDigits: 4 });
+  if (a >= 0.0001) return n.toLocaleString("en-US", { maximumSignificantDigits: 4 });
+  return tiny(n);
+}
+function eth(wei) { return num(Number(ethers.formatEther(wei))); }
+function usd(ethAmount) {
+  if (!state.ethUsd || !isFinite(ethAmount)) return "";
+  const v = ethAmount * state.ethUsd;
+  if (v >= 1) return "$" + num(v);
+  return "$" + (v < 0.01 ? num(v) : v.toFixed(2));
+}
+function ago(ts) {
+  const d = Math.max(0, Date.now() / 1000 - ts);
+  if (d < 60) return "just now";
+  if (d < 3600) return Math.floor(d / 60) + "m ago";
+  if (d < 86400) return Math.floor(d / 3600) + "h ago";
+  return Math.floor(d / 86400) + "d ago";
+}
+function explorer(type, v) { return `${CONFIG.explorer}/${type}/${v}`; }
+function safeUrl(u) {
+  u = String(u || "").trim();
+  if (!u) return null;
+  try { const x = new URL(u); return (x.protocol === "https:" || x.protocol === "http:") ? x.href : null; } catch (e) { return null; }
+}
+function imgSources(uri) {
+  uri = String(uri || "").trim();
+  if (/^ipfs:\/\//i.test(uri)) {
+    const cid = uri.slice(7).replace(/^ipfs\//i, "");
+    if (!/^[A-Za-z0-9._\/-]+$/.test(cid)) return [];
+    return CONFIG.ipfsGateways.map(g => g + cid);
+  }
+  if (/^https:\/\//i.test(uri)) return [uri];
+  if (/^data:image\/(png|jpeg|webp|gif);base64,/i.test(uri)) return [uri];
+  return [];
+}
+function hue(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+function placeholder(el, label) {
+  const d = document.createElement("div");
+  d.className = "ph";
+  d.style.background = `hsl(${hue(label)} 62% 52%)`;
+  d.textContent = ([...String(label || "?").trim()][0] || "?").toUpperCase();
+  el.replaceChildren(d);
+}
+function mountImg(el, uri, label) {
+  const srcs = imgSources(uri);
+  if (!srcs.length) return placeholder(el, label);
+  let i = 0;
+  const img = new Image();
+  img.alt = label || "";
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.referrerPolicy = "no-referrer";
+  img.onerror = () => { i++; if (i < srcs.length) img.src = srcs[i]; else placeholder(el, label); };
+  img.src = srcs[0];
+  el.replaceChildren(img);
+}
+function hydrateImages(root = document) {
+  $$("[data-img]", root).forEach(el => { mountImg(el, el.dataset.img, el.dataset.label); el.removeAttribute("data-img"); });
+}
+
+function feesOf(amount, bps) {
+  const pf = amount * PLATFORM_BPS / BPS;
+  const cf = bps > FROM_CREATOR_BPS ? amount * (bps - FROM_CREATOR_BPS) / BPS : 0n;
+  return [pf, cf];
+}
+function ceilDiv(a, b) { return a === 0n ? 0n : (a - 1n) / b + 1n; }
+function calcBuy(pool, ethIn) {
+  if (ethIn <= 0n) return 0n;
+  const [pf, cf] = feesOf(ethIn, BigInt(pool.fee));
+  const x = ethIn - pf - cf;
+  const k = pool.vEth * pool.vToken;
+  return pool.vToken - ceilDiv(k, pool.vEth + x);
+}
+function calcSell(pool, amt) {
+  if (amt <= 0n) return { out: 0n, fee: 0n };
+  const k = pool.vEth * pool.vToken;
+  const gross = pool.vEth - ceilDiv(k, pool.vToken + amt);
+  if (gross > pool.realEth) return null;
+  const [pf, cf] = feesOf(gross, BigInt(pool.fee));
+  return { out: gross - pf - cf, fee: pf + cf };
+}
+function priceEth(pool) { return Number(pool.vEth) / Number(pool.vToken); }
+function mcapEth(pool) { return Number(ethers.formatEther(pool.vEth * SUPPLY / pool.vToken)); }
+function feeText(bps) {
+  const creator = bps > 300 ? (bps - 300) / 100 : 0;
+  return { total: 5 + creator, creator, set: bps / 100 };
+}
+
+function initChain() {
+  iface = new ethers.Interface(LP_ABI);
+  net = ethers.Network.from(CONFIG.chainId);
+  providers = CONFIG.rpcs.map(u => new ethers.JsonRpcProvider(u, net, { staticNetwork: net }));
+}
+function isContractError(e) { return e && ["CALL_EXCEPTION", "INVALID_ARGUMENT", "BAD_DATA", "NUMERIC_FAULT"].includes(e.code); }
+function withTimeout(p, ms) { return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("RPC timeout")), ms))]); }
+async function rpc(fn) {
+  let last;
+  for (let i = 0; i < providers.length; i++) {
+    const idx = (rpcIndex + i) % providers.length;
+    try {
+      const r = await withTimeout(fn(providers[idx]), 10000);
+      rpcIndex = idx;
+      return r;
+    } catch (e) {
+      if (isContractError(e)) throw e;
+      last = e;
+      console.warn("RPC " + (idx + 1) + " failed, trying the next one", e && (e.shortMessage || e.message));
+    }
+  }
+  throw last || new Error("All RPC endpoints failed");
+}
+function lp(p) { return new ethers.Contract(CONFIG.contract, LP_ABI, p); }
+function erc(addr, p) { return new ethers.Contract(addr, ERC20_ABI, p); }
+function normInfo(i) { return { name: i.name, symbol: i.symbol, image: i.image, description: i.description, x: i.x, telegram: i.telegram, discord: i.discord, website: i.website, xPost: i.xPost }; }
+function normPool(p) { return { creator: p.creator, fee: Number(p.creatorFeeBps), vEth: p.vEth, vToken: p.vToken, realEth: p.realEth, createdAt: Number(p.createdAt) }; }
+async function loadToken(addr) {
+  return rpc(async p => {
+    const c = lp(p);
+    const [info, pool] = await Promise.all([c.getInfo(addr), c.pools(addr)]);
+    return { addr, info: normInfo(info), pool: normPool(pool) };
+  });
+}
+async function loadTokens(addrs) {
+  const out = await Promise.all(addrs.map(a => loadToken(a).catch(() => null)));
+  return out.filter(t => t && t.pool.creator !== ethers.ZeroAddress);
+}
+async function vStart() {
+  if (state.vStart === null) state.vStart = await rpc(p => lp(p).virtualEthStart());
+  return state.vStart;
+}
+
+async function scanLogs(params) {
+  const q = new URLSearchParams({ module: "logs", action: "getLogs", fromBlock: "0", toBlock: "latest", address: CONFIG.contract, ...params });
+  const r = await fetch(`${CONFIG.explorer}/api?${q}`);
+  if (!r.ok) throw new Error("Explorer unavailable");
+  const j = await r.json();
+  if (!Array.isArray(j.result)) return [];
+  return j.result.map(l => {
+    try {
+      const ev = iface.parseLog({ topics: (l.topics || []).filter(Boolean), data: l.data });
+      return ev ? { ev, ts: parseInt(l.timeStamp, 16), tx: l.transactionHash, block: parseInt(l.blockNumber, 16), idx: parseInt(l.logIndex, 16) || 0 } : null;
+    } catch (e) { return null; }
+  }).filter(Boolean).sort((a, b) => a.block - b.block || a.idx - b.idx);
+}
+function topicAddr(a) { return ethers.zeroPadValue(a, 32).toLowerCase(); }
+
+function toast(msg, type = "", link = null) {
+  const el = document.createElement("div");
+  const set = (m, t, l) => {
+    el.className = "toast " + (t || "");
+    el.textContent = m;
+    if (l) { const a = document.createElement("a"); a.href = l; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "View on explorer"; el.append(document.createElement("br"), a); }
+  };
+  set(msg, type, link);
+  $("#toasts").append(el);
+  const api = { update: set, close: (ms = 0) => setTimeout(() => el.remove(), ms) };
+  if (type !== "pending") api.close(6000);
+  return api;
+}
+function errMsg(e) {
+  const code = e && (e.code ?? e.info?.error?.code ?? e.error?.code);
+  if (code === "ACTION_REJECTED" || code === 4001) return "Cancelled in your wallet.";
+  const raw = [e?.reason, e?.shortMessage, e?.info?.error?.message, e?.message].filter(Boolean).join(" ");
+  if (/slippage/i.test(raw)) return "The price moved too much. Try again or raise the max price change.";
+  if (/max 20%/i.test(raw)) return "A launch buy can be at most 20% of the supply.";
+  if (/insufficient funds/i.test(raw)) return "Not enough ETH for this amount plus gas.";
+  if (/not enough eth/i.test(raw)) return "The pool doesn't hold enough ETH for this sale.";
+  if (/name 1-32/i.test(raw)) return "The name must be 1 to 32 characters.";
+  if (/symbol 1-10/i.test(raw)) return "The symbol must be 1 to 10 characters.";
+  return String(e?.shortMessage || e?.reason || e?.message || "Something went wrong.").slice(0, 180);
+}
+
+function walletOptions() {
+  const list = [...walletMap.values()];
+  if (!list.length && window.ethereum) list.push({ info: { uuid: "legacy", name: "Browser wallet", icon: "", rdns: "legacy" }, provider: window.ethereum });
+  return list;
+}
+function renderWalletList() {
+  const box = $("#wlist");
+  const list = walletOptions();
+  if (!list.length) {
+    box.innerHTML = `<div class="empty"><b>No wallet found</b>Install a wallet extension such as MetaMask, Rabby, OKX or Coinbase Wallet. On a phone or tablet, open this site inside your wallet app's browser.</div>`;
+    return;
+  }
+  box.replaceChildren(...list.map(w => {
+    const b = document.createElement("button");
+    b.className = "wopt";
+    if (w.info.icon && /^data:image\//i.test(w.info.icon)) { const i = new Image(); i.src = w.info.icon; i.alt = ""; b.append(i); }
+    else { const d = document.createElement("span"); d.className = "wph"; b.append(d); }
+    b.append(document.createTextNode(w.info.name || "Wallet"));
+    b.onclick = () => connectWith(w);
+    return b;
+  }));
+}
+function openWalletModal() { renderWalletList(); $("#walletModal").hidden = false; window.dispatchEvent(new Event("eip6963:requestProvider")); }
+function closeWalletModal() { $("#walletModal").hidden = true; }
+
+async function connectWith(w) {
+  try {
+    const accts = await w.provider.request({ method: "eth_requestAccounts" });
+    if (!accts || !accts[0]) throw new Error("No account selected.");
+    closeWalletModal();
+    setConnected(w, accts[0]);
+    await ensureChain().catch(e => toast(errMsg(e), "err"));
+  } catch (e) { toast(errMsg(e), "err"); }
+}
+function setConnected(w, account) {
+  detach();
+  state.wallet = w;
+  state.account = ethers.getAddress(account);
+  store("lp_wallet", w.info.rdns);
+  const onAcc = a => { if (!a || !a.length) disconnect(); else { state.account = ethers.getAddress(a[0]); renderWallet(); route(); } };
+  const onChain = c => { state.chainOk = parseInt(c, 16) === CONFIG.chainId; renderWallet(); };
+  if (w.provider.on) { w.provider.on("accountsChanged", onAcc); w.provider.on("chainChanged", onChain); }
+  state.handlers = { onAcc, onChain };
+  w.provider.request({ method: "eth_chainId" }).then(onChain).catch(() => {});
+  renderWallet();
+  route();
+}
+function detach() {
+  const w = state.wallet, h = state.handlers;
+  if (w && h && w.provider.removeListener) { w.provider.removeListener("accountsChanged", h.onAcc); w.provider.removeListener("chainChanged", h.onChain); }
+  state.handlers = null;
+}
+function disconnect() {
+  detach();
+  state.wallet = null; state.account = null; state.chainOk = false;
+  store("lp_wallet", null);
+  renderWallet();
+  route();
+}
+async function ensureChain() {
+  const p = state.wallet.provider;
+  const hex = "0x" + CONFIG.chainId.toString(16);
+  const cur = await p.request({ method: "eth_chainId" });
+  if (parseInt(cur, 16) === CONFIG.chainId) { state.chainOk = true; renderWallet(); return; }
+  try {
+    await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] });
+  } catch (e) {
+    const code = e?.code ?? e?.data?.originalError?.code;
+    if (code === 4902 || /unrecognized|not added|unknown chain|not been added/i.test(e?.message || "")) {
+      await p.request({ method: "wallet_addEthereumChain", params: [{ chainId: hex, chainName: CONFIG.chainName, nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: [CONFIG.walletRpc], blockExplorerUrls: [CONFIG.explorer] }] });
+    } else throw e;
+  }
+  const c2 = await p.request({ method: "eth_chainId" });
+  state.chainOk = parseInt(c2, 16) === CONFIG.chainId;
+  renderWallet();
+  if (!state.chainOk) throw new Error("Switch your wallet to Robinhood Chain to continue.");
+}
+async function renderWallet() {
+  const area = $("#walletArea");
+  if (!state.account) {
+    area.innerHTML = `<button class="btn primary" id="connectBtn">Connect wallet</button>`;
+    $("#connectBtn").onclick = openWalletModal;
+    return;
+  }
+  if (!state.chainOk) {
+    area.innerHTML = `<button class="btn" id="switchBtn">Switch to Robinhood Chain</button>`;
+    $("#switchBtn").onclick = () => ensureChain().catch(e => toast(errMsg(e), "err"));
+    return;
+  }
+  area.innerHTML = `<button class="chip" id="chipBtn" aria-haspopup="true"><span class="num" id="chipBal">…</span><span class="addr">${short(state.account)}</span></button>
+  <div class="menu" id="wMenu" hidden>
+    <button id="mCopy">Copy address</button>
+    <a href="${explorer("address", state.account)}" target="_blank" rel="noopener noreferrer">View on explorer</a>
+    <a href="#/earnings">My earnings</a>
+    <button id="mOut">Disconnect</button>
+  </div>`;
+  $("#chipBtn").onclick = e => { e.stopPropagation(); $("#wMenu").hidden = !$("#wMenu").hidden; };
+  $("#mCopy").onclick = () => { navigator.clipboard?.writeText(state.account); toast("Address copied", "ok"); };
+  $("#mOut").onclick = disconnect;
+  try {
+    const bal = await rpc(p => p.getBalance(state.account));
+    const el = $("#chipBal"); if (el) el.textContent = eth(bal) + " ETH";
+  } catch (e) {}
+}
+document.addEventListener("click", () => { const m = $("#wMenu"); if (m) m.hidden = true; });
+
+async function waitReceipt(hash) {
+  for (let i = 0; i < 120; i++) {
+    try { const rc = await rpc(p => p.getTransactionReceipt(hash)); if (rc) return rc; } catch (e) {}
+    await sleep(1500);
+  }
+  throw new Error("Still waiting for confirmation. Check the explorer.");
+}
+async function runTx(label, fn) {
+  if (!state.account) { openWalletModal(); throw new Error("Connect your wallet first."); }
+  await ensureChain();
+  const bp = new ethers.BrowserProvider(state.wallet.provider, "any");
+  const signer = await bp.getSigner(state.account);
+  const t = toast(`${label}: confirm in your wallet`, "pending");
+  try {
+    const tx = await fn(signer);
+    t.update(`${label}: waiting for the network`, "pending", explorer("tx", tx.hash));
+    const rc = await waitReceipt(tx.hash);
+    if (rc.status !== 1) throw new Error("The transaction failed on chain.");
+    t.update(`${label}: done`, "ok", explorer("tx", tx.hash));
+    t.close(7000);
+    renderWallet();
+    return rc;
+  } catch (e) {
+    t.update(errMsg(e), "err");
+    t.close(9000);
+    throw e;
+  }
+}
+
+function setNav(name) { $$("nav.main a").forEach(a => a.classList.toggle("on", a.dataset.nav === name)); }
+function route() {
+  clearInterval(state.timer);
+  const h = location.hash.replace(/^#/, "") || "/";
+  const m = h.match(/^\/token\/(0x[0-9a-fA-F]{40})$/);
+  window.scrollTo(0, 0);
+  if (m) { setNav(""); return renderToken(m[1]); }
+  if (h === "/create") { setNav("create"); return renderCreate(); }
+  if (h === "/earnings") { setNav("earnings"); return renderEarnings(); }
+  setNav("home");
+  renderHome();
+}
+
+function cardHTML(t) {
+  const mc = mcapEth(t.pool);
+  return `<a class="card" href="#/token/${t.addr}">
+    <div class="thumb" data-img="${esc(t.info.image)}" data-label="${esc(t.info.name)}"></div>
+    <div class="card-body">
+      <div class="card-name">${esc(t.info.name)}</div>
+      <div class="card-sym">${esc(t.info.symbol)}</div>
+      <div class="card-desc">${esc(t.info.description)}</div>
+      <div class="card-foot"><span>Market cap <b class="num">${num(mc)} ETH</b></span><span>${ago(t.pool.createdAt)}</span></div>
+    </div></a>`;
+}
+
+async function renderHome() {
+  app.innerHTML = `
+  <section class="hero">
+    <div>
+      <h1>Launch a token on Robinhood Chain.</h1>
+      <p>One transaction to go live. The price moves with every buy and sell, so everyone starts from the same curve.</p>
+      <div class="hero-actions">
+        <a class="btn primary big" href="#/create">Create a token</a>
+        <span class="stat-line"><b class="num" id="countNum">…</b>tokens launched</span>
+      </div>
+    </div>
+    <div class="curve-wrap">
+      <svg class="curve-art" viewBox="0 0 400 300" aria-hidden="true">
+        <line class="grid-l" x1="20" y1="280" x2="390" y2="280"/><line class="grid-l" x1="20" y1="20" x2="20" y2="280"/>
+        <path class="area" d="M20 272 C 150 268, 260 236, 372 40 L 372 280 L 20 280 Z"/>
+        <path class="path" d="M20 272 C 150 268, 260 236, 372 40"/>
+        <circle class="dot" cx="372" cy="40" r="10"/>
+      </svg>
+    </div>
+  </section>
+  <section class="list-head">
+    <h2>Tokens</h2>
+    <div class="tools">
+      <input id="search" type="search" placeholder="Search name or symbol, or paste an address" aria-label="Search tokens">
+      <select id="sort" aria-label="Sort"><option value="new">Newest</option><option value="mc">Highest market cap</option></select>
+    </div>
+  </section>
+  <div id="grid" class="grid">${'<div class="skel"></div>'.repeat(4)}</div>
+  <div class="more"><button id="loadMore" class="btn" hidden>Load more</button></div>`;
+
+  $("#search").addEventListener("input", drawGrid);
+  $("#search").addEventListener("keydown", e => { const v = e.target.value.trim(); if (e.key === "Enter" && ethers.isAddress(v)) location.hash = "#/token/" + ethers.getAddress(v); });
+  $("#sort").addEventListener("change", drawGrid);
+  $("#loadMore").onclick = () => loadMore().catch(() => toast("Couldn't load more tokens", "err"));
+
+  try {
+    const count = Number(await rpc(p => lp(p).tokenCount()));
+    if (!$("#countNum")) return;
+    $("#countNum").textContent = count.toLocaleString("en-US");
+    if (!state.list || state.list.count !== count) state.list = { count, items: [], next: count };
+    if (!state.list.items.length && count) await loadMore(); else drawGrid();
+  } catch (e) {
+    const g = $("#grid");
+    if (g) g.innerHTML = `<div class="empty" style="grid-column:1/-1"><b>Couldn't reach Robinhood Chain</b>Check your connection and reload the page.</div>`;
+  }
+}
+async function loadMore() {
+  const L = state.list;
+  if (!L || L.next <= 0) return drawGrid();
+  const btn = $("#loadMore"); if (btn) btn.disabled = true;
+  try {
+    const start = Math.max(0, L.next - CONFIG.pageSize);
+    const addrs = await rpc(p => lp(p).getTokens(start, L.next - start));
+    const items = await loadTokens([...addrs].reverse());
+    L.items.push(...items);
+    L.next = start;
+  } finally { if (btn) btn.disabled = false; }
+  drawGrid();
+}
+function drawGrid() {
+  const grid = $("#grid"); if (!grid || !state.list) return;
+  const q = ($("#search")?.value || "").trim().toLowerCase();
+  let items = state.list.items.filter(t => !q || t.info.name.toLowerCase().includes(q) || t.info.symbol.toLowerCase().includes(q) || t.addr.toLowerCase() === q);
+  if ($("#sort")?.value === "mc") items = [...items].sort((a, b) => mcapEth(b.pool) - mcapEth(a.pool));
+  if (!state.list.count) grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><b>No tokens yet</b>Be the first. <a href="#/create">Create a token</a></div>`;
+  else if (!items.length) grid.innerHTML = ethers.isAddress(q)
+    ? `<div class="empty" style="grid-column:1/-1"><b>Not in the loaded list</b><a href="#/token/${ethers.getAddress(q)}">Open this address</a></div>`
+    : `<div class="empty" style="grid-column:1/-1"><b>No matches</b>Try another name or symbol.</div>`;
+  else { grid.innerHTML = items.map(cardHTML).join(""); hydrateImages(grid); }
+  $("#loadMore").hidden = state.list.next <= 0;
+}
+
+function renderCreate() {
+  const canUpload = !!CONFIG.pinataJwt;
+  app.innerHTML = `
+  <section class="create">
+    <div>
+      <h1 class="page-title">Create a token</h1>
+      <p class="lede">Only the name and symbol are required. Everything else helps people trust your project.</p>
+      <form id="cf" novalidate>
+        <div class="row2">
+          <label class="field"><span>Name</span><input id="fName" maxlength="32" placeholder="Moon Cat" autocomplete="off"><small class="hint" id="hName">Up to 32 characters</small></label>
+          <label class="field"><span>Symbol</span><input id="fSym" maxlength="10" placeholder="MCAT" autocomplete="off"><small class="hint" id="hSym">Up to 10 characters</small></label>
+        </div>
+        ${canUpload ? `
+        <div class="field"><span>Image</span>
+          <div class="drop"><input type="file" id="fFile" accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif" aria-label="Token image">
+            <div class="drop-thumb" id="dThumb">+</div>
+            <div><b id="dName">Choose an image</b><small>PNG, JPG, WEBP or GIF, up to ${CONFIG.maxImageMB} MB. Square works best.</small></div>
+          </div><small class="hint" id="hImg"></small>
+        </div>` : `
+        <label class="field"><span>Image link</span><input id="fImgUrl" placeholder="https://… or ipfs://…" autocomplete="off"><small class="hint" id="hImg">A direct link to a PNG, JPG, WEBP or GIF image.</small></label>`}
+        <label class="field"><span>Description</span><textarea id="fDesc" maxlength="600" placeholder="What is this token about?"></textarea></label>
+        <fieldset class="links">
+          <legend class="legend">Community links (optional)</legend>
+          <label>X profile<input id="fX" placeholder="https://x.com/…"></label>
+          <label>Telegram<input id="fTg" placeholder="https://t.me/…"></label>
+          <label>Discord<input id="fDc" placeholder="https://discord.gg/…"></label>
+          <label>Website<input id="fWeb" placeholder="https://…"></label>
+          <label style="grid-column:1/-1">X post<input id="fPost" placeholder="https://x.com/…/status/…"></label>
+        </fieldset>
+        <small class="hint" id="hLinks"></small>
+        <div class="field"><span>Creator fee</span>
+          <div class="fee-row"><input type="range" id="fFee" min="0" max="10" step="0.5" value="10" aria-label="Creator fee percent"><span class="fee-val num" id="feeVal">10%</span></div>
+          <small class="hint" id="feeInfo"></small>
+        </div>
+        <div class="field"><span>Buy at launch (optional)</span>
+          <div class="inline"><div class="amt" style="flex:1"><input id="fBuy" inputmode="decimal" placeholder="0.0" autocomplete="off" aria-label="Launch buy in ETH"><span class="unit">ETH</span></div><button type="button" id="maxBuy" class="btn">Max 20%</button></div>
+          <small class="hint" id="hBuy">You can buy up to 20% of the supply in the same transaction.</small>
+        </div>
+        <button class="btn primary big wide" id="createBtn" type="submit">Create token</button>
+        <p class="fine">You only pay network gas. Supply is fixed at 1,000,000,000 and the fee can't be changed later.</p>
+      </form>
+    </div>
+    <aside class="preview">
+      <div id="pv"></div>
+      <div class="side-note"><b>How trading works</b>Every token starts on a price curve. Buys push the price up and sells bring it down. Traders pay the trade fee on each buy and sell.</div>
+    </aside>
+  </section>`;
+
+  let file = null, fileUrl = null;
+  const bytes = s => new TextEncoder().encode(s).length;
+  const pv = () => {
+    const t = { addr: "0x0000000000000000000000000000000000000000", info: { name: $("#fName").value || "Your token", symbol: $("#fSym").value || "SYMBOL", description: $("#fDesc").value, image: fileUrl ? "" : ($("#fImgUrl")?.value || "") }, pool: { vEth: 10n ** 18n, vToken: SUPPLY, createdAt: Date.now() / 1000 } };
+    $("#pv").innerHTML = cardHTML(t);
+    const th = $("#pv .thumb");
+    if (fileUrl) { th.removeAttribute("data-img"); const i = new Image(); i.src = fileUrl; i.alt = ""; th.replaceChildren(i); }
+    hydrateImages($("#pv"));
+  };
+  const bps = () => Math.round(Number($("#fFee").value) * 100);
+  const buyWei = () => { const v = $("#fBuy").value.trim(); if (!v) return 0n; try { const w = ethers.parseEther(v); return w < 0n ? -1n : w; } catch (e) { return -1n; } };
+  const buyUpd = async () => {
+    const h = $("#hBuy"), w = buyWei();
+    h.className = "hint";
+    if (w === 0n) { h.textContent = "You can buy up to 20% of the supply in the same transaction."; return; }
+    if (w < 0n) { h.className = "hint err"; h.textContent = "Enter a number like 0.05"; return; }
+    const V = await vStart().catch(() => null); if (V === null) return;
+    const out = calcBuy({ vEth: V, vToken: SUPPLY, fee: bps() }, w);
+    const pct = Number(out * 10000n / SUPPLY) / 100;
+    if (out > MAX_LAUNCH_BUY) { h.className = "hint err"; h.textContent = `That's ${pct}% of the supply. The limit is 20%.`; }
+    else h.textContent = `You'll get about ${num(Number(ethers.formatEther(out)))} tokens (${pct}% of the supply).`;
+  };
+  const feeUpd = () => {
+    const f = feeText(bps());
+    $("#feeVal").textContent = f.set + "%";
+    $("#feeInfo").textContent = `Traders pay ${f.total}% on each buy and sell. You earn ${f.creator}% and the marketplace keeps 5%.`;
+    buyUpd();
+  };
+
+  ["fName", "fSym", "fDesc", "fImgUrl"].forEach(id => $("#" + id)?.addEventListener("input", pv));
+  $("#fFee").addEventListener("input", feeUpd);
+  $("#fBuy").addEventListener("input", buyUpd);
+  $("#maxBuy").onclick = async () => {
+    const V = await vStart().catch(() => null); if (V === null) return toast("Couldn't reach the network", "err");
+    const b = BigInt(bps());
+    const tot = PLATFORM_BPS + (b > FROM_CREATOR_BPS ? b - FROM_CREATOR_BPS : 0n);
+    const pool = { vEth: V, vToken: SUPPLY, fee: bps() };
+    let w = (V / 4n) * BPS / (BPS - tot);
+    w = w / 10n ** 12n * 10n ** 12n;
+    while (w > 0n && calcBuy(pool, w) > MAX_LAUNCH_BUY) w -= 10n ** 12n;
+    $("#fBuy").value = ethers.formatEther(w);
+    buyUpd();
+  };
+  $("#fFile")?.addEventListener("change", e => {
+    const f = e.target.files[0]; const h = $("#hImg"); h.className = "hint"; h.textContent = "";
+    file = null; if (fileUrl) URL.revokeObjectURL(fileUrl); fileUrl = null;
+    if (!f) { $("#dThumb").textContent = "+"; $("#dName").textContent = "Choose an image"; return pv(); }
+    if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(f.type)) { h.className = "hint err"; h.textContent = "Use a PNG, JPG, WEBP or GIF file."; e.target.value = ""; return pv(); }
+    if (f.size > CONFIG.maxImageMB * 1024 * 1024) { h.className = "hint err"; h.textContent = `The file is larger than ${CONFIG.maxImageMB} MB.`; e.target.value = ""; return pv(); }
+    file = f; fileUrl = URL.createObjectURL(f);
+    const i = new Image(); i.src = fileUrl; i.alt = ""; $("#dThumb").replaceChildren(i);
+    $("#dName").textContent = f.name;
+    pv();
+  });
+
+  $("#cf").addEventListener("submit", async e => {
+    e.preventDefault();
+    const name = $("#fName").value.trim(), sym = $("#fSym").value.trim();
+    let ok = true;
+    const bad = (id, msg) => { const h = $(id); h.className = "hint err"; h.textContent = msg; ok = false; };
+    $("#hName").className = "hint"; $("#hSym").className = "hint";
+    $("#hName").textContent = "Up to 32 characters"; $("#hSym").textContent = "Up to 10 characters";
+    $("#hLinks").className = "hint"; $("#hLinks").textContent = "";
+    if (!name) bad("#hName", "Add a name."); else if (bytes(name) > 32) bad("#hName", "The name is too long. Remove a few characters or emoji.");
+    if (!sym) bad("#hSym", "Add a symbol."); else if (bytes(sym) > 10) bad("#hSym", "The symbol is too long. Remove a few characters or emoji.");
+    const links = { x: $("#fX").value.trim(), telegram: $("#fTg").value.trim(), discord: $("#fDc").value.trim(), website: $("#fWeb").value.trim(), xPost: $("#fPost").value.trim() };
+    for (const k in links) if (links[k] && !safeUrl(links[k])) { bad("#hLinks", "Each link must start with https://"); break; }
+    let image = "";
+    if (!canUpload) {
+      image = $("#fImgUrl").value.trim();
+      if (image && !imgSources(image).length) bad("#hImg", "The image link must start with https:// or ipfs://");
+    }
+    const w = buyWei();
+    if (w < 0n) ok = false;
+    if (!ok) return;
+    const fee = bps();
+    if (!state.account) return openWalletModal();
+
+    const btn = $("#createBtn"); btn.disabled = true;
+    try {
+      let minOut = 0n;
+      if (w > 0n) {
+        const V = await vStart();
+        const out = calcBuy({ vEth: V, vToken: SUPPLY, fee }, w);
+        if (out > MAX_LAUNCH_BUY) throw new Error("max 20%");
+        minOut = out * 99n / 100n;
+      }
+      if (canUpload && file) {
+        btn.textContent = "Uploading image…";
+        image = await uploadImage(file);
+      }
+      btn.textContent = "Creating…";
+      const info = { name, symbol: sym, image, description: $("#fDesc").value.trim(), ...links };
+      const rc = await runTx("Create token", s => lp(s).createToken(info, fee, minOut, { value: w }));
+      let token = null;
+      for (const l of rc.logs) {
+        if (l.address.toLowerCase() !== CONFIG.contract.toLowerCase()) continue;
+        try { const ev = iface.parseLog(l); if (ev && ev.name === "TokenCreated") token = ev.args.token; } catch (err) {}
+      }
+      state.list = null;
+      location.hash = token ? "#/token/" + token : "#/";
+    } catch (err) {
+      if (/upload|max 20%/i.test(err?.message || "")) toast(errMsg(err), "err");
+    } finally {
+      btn.disabled = false; btn.textContent = "Create token";
+    }
+  });
+  feeUpd(); pv();
+}
+async function uploadImage(file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("pinataMetadata", JSON.stringify({ name: "token-image-" + Date.now() }));
+  let r;
+  try { r = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", { method: "POST", headers: { Authorization: "Bearer " + CONFIG.pinataJwt }, body: fd }); }
+  catch (e) { throw new Error("Image upload failed. Check your connection and try again."); }
+  if (!r.ok) throw new Error("Image upload failed (" + r.status + "). Try again later.");
+  const j = await r.json();
+  if (!j.IpfsHash) throw new Error("Image upload failed. Try again.");
+  return "ipfs://" + j.IpfsHash;
+}
+
+async function renderToken(addr) {
+  addr = ethers.getAddress(addr);
+  app.innerHTML = `<div class="skel" style="min-height:420px"></div>`;
+  let t;
+  try { t = await loadToken(addr); } catch (e) { t = null; }
+  if (location.hash.toLowerCase() !== ("#/token/" + addr).toLowerCase()) return;
+  if (!t || t.pool.creator === ethers.ZeroAddress) {
+    app.innerHTML = `<div class="empty"><b>Token not found</b>This address wasn't created on this launchpad. <a href="#/">Back to tokens</a></div>`;
+    return;
+  }
+  const i = t.info;
+  const symShort = [...i.symbol].slice(0, 10).join("");
+  const linkDefs = [["x", "X"], ["telegram", "Telegram"], ["discord", "Discord"], ["website", "Website"], ["xPost", "X post"]];
+  const pills = linkDefs.map(([k, label]) => { const u = safeUrl(i[k]); return u ? `<a class="pill" href="${esc(u)}" target="_blank" rel="noopener noreferrer nofollow">${label}</a>` : ""; }).join("");
+  const f = feeText(t.pool.fee);
+  app.innerHTML = `
+  <section class="token">
+    <div>
+      <div class="t-head">
+        <div class="t-img" data-img="${esc(i.image)}" data-label="${esc(i.name)}"></div>
+        <div>
+          <h1>${esc(i.name)}</h1>
+          <div class="t-sym">${esc(i.symbol)}</div>
+          <div class="pills">${pills}<button class="pill" id="shareBtn">Copy link</button></div>
+        </div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="panel"><h3>Price</h3><div id="chart"><p class="fine">Loading trades…</p></div></div>
+      <div class="panel">
+        <h3>About</h3>
+        ${i.description ? `<p class="desc">${esc(i.description)}</p>` : `<p class="fine">The creator hasn't added a description.</p>`}
+        <dl class="meta">
+          <dt>Creator</dt><dd><a href="${explorer("address", t.pool.creator)}" target="_blank" rel="noopener noreferrer">${short(t.pool.creator)}</a></dd>
+          <dt>Created</dt><dd>${new Date(t.pool.createdAt * 1000).toLocaleString()}</dd>
+          <dt>Trade fee</dt><dd>${f.total}% per trade (creator ${f.creator}%, marketplace 5%)</dd>
+          <dt>Token</dt><dd><button class="linkbtn" id="copyCa">${short(addr)}</button> · <a href="${explorer("token", addr)}" target="_blank" rel="noopener noreferrer">Explorer</a></dd>
+        </dl>
+      </div>
+      <div class="panel"><h3>Recent trades</h3><div id="trades" class="tbl-wrap"><p class="fine">Loading…</p></div></div>
+    </div>
+    <aside class="trade-box panel">
+      <div class="tabs" role="tablist"><button class="on" data-side="buy">Buy</button><button data-side="sell">Sell</button></div>
+      <div class="amt"><input id="amt" inputmode="decimal" placeholder="0.0" autocomplete="off" aria-label="Amount"><span class="unit" id="amtUnit">ETH</span></div>
+      <div class="quick" id="quick"></div>
+      <div class="est" id="est"></div>
+      <div class="slip">Max price change <input id="slip" value="${CONFIG.defaultSlippage}" inputmode="decimal" aria-label="Max price change percent">%</div>
+      <button class="btn buy big wide" id="tradeBtn">Buy</button>
+      <div class="bal"><span id="balEth"></span><span id="balTok"></span></div>
+    </aside>
+  </section>`;
+  hydrateImages(app);
+  $("#shareBtn").onclick = () => { navigator.clipboard?.writeText(location.href); toast("Link copied", "ok"); };
+  $("#copyCa").onclick = () => { navigator.clipboard?.writeText(addr); toast("Token address copied", "ok"); };
+
+  let side = "buy", sellExact = null, balEth = null, balTok = null;
+  const drawStats = () => {
+    const p = priceEth(t.pool), mc = mcapEth(t.pool), pool = Number(ethers.formatEther(t.pool.realEth));
+    $("#stats").innerHTML = `
+      <div><small>Price</small><b class="num">${num(p)} ETH</b><em>${usd(p)}</em></div>
+      <div><small>Market cap</small><b class="num">${num(mc)} ETH</b><em>${usd(mc)}</em></div>
+      <div><small>ETH in pool</small><b class="num">${num(pool)} ETH</b><em>${usd(pool)}</em></div>
+      <div><small>Trade fee</small><b class="num">${f.total}%</b><em>creator ${f.creator}%</em></div>`;
+  };
+  const amtWei = () => {
+    if (side === "sell" && sellExact !== null) return sellExact;
+    const v = $("#amt").value.trim(); if (!v) return 0n;
+    try { const w = ethers.parseEther(v); return w < 0n ? -1n : w; } catch (e) { return -1n; }
+  };
+  const slipBps = () => { const s = Number($("#slip").value); return BigInt(Math.round(Math.min(Math.max(isFinite(s) ? s : 5, 0.1), 50) * 100)); };
+  const drawEst = () => {
+    const a = amtWei(), est = $("#est"), btn = $("#tradeBtn");
+    if (!est) return;
+    btn.disabled = false;
+    if (a < 0n) { est.innerHTML = `<div><span class="s">Enter a number like 0.05</span></div>`; btn.disabled = true; return; }
+    if (a === 0n) { est.innerHTML = `<div><span>You receive</span><b>–</b></div>`; return; }
+    if (side === "buy") {
+      const out = calcBuy(t.pool, a);
+      const [pf, cf] = feesOf(a, BigInt(t.pool.fee));
+      est.innerHTML = `<div><span>You receive about</span><b class="num">${num(Number(ethers.formatEther(out)))} ${esc(symShort)}</b></div>
+        <div><span>Trade fee</span><b class="num">${eth(pf + cf)} ETH</b></div>`;
+      if (balEth !== null && a > balEth) { est.innerHTML += `<div><span class="s">Not enough ETH in your wallet</span></div>`; btn.disabled = true; }
+    } else {
+      const r = calcSell(t.pool, a);
+      if (r === null) { est.innerHTML = `<div><span class="s">The pool can't cover this sale</span></div>`; btn.disabled = true; return; }
+      est.innerHTML = `<div><span>You receive about</span><b class="num">${eth(r.out)} ETH</b></div>
+        <div><span>Trade fee</span><b class="num">${eth(r.fee)} ETH</b></div>`;
+      if (balTok !== null && a > balTok) { est.innerHTML += `<div><span class="s">You don't hold that many tokens</span></div>`; btn.disabled = true; }
+    }
+  };
+  const drawQuick = () => {
+    const q = $("#quick");
+    if (side === "buy") {
+      q.innerHTML = ["0.001", "0.005", "0.01", "0.05"].map(v => `<button data-v="${v}">${v} ETH</button>`).join("");
+      $$("button", q).forEach(b => b.onclick = () => { sellExact = null; $("#amt").value = b.dataset.v; drawEst(); });
+    } else {
+      q.innerHTML = [25, 50, 75, 100].map(v => `<button data-p="${v}">${v}%</button>`).join("");
+      $$("button", q).forEach(b => b.onclick = () => {
+        if (!state.account) return openWalletModal();
+        if (!balTok) return toast("You don't hold this token yet", "err");
+        sellExact = balTok * BigInt(b.dataset.p) / 100n;
+        $("#amt").value = Number(ethers.formatEther(sellExact)).toLocaleString("en-US", { maximumFractionDigits: 4, useGrouping: false });
+        drawEst();
+      });
+    }
+  };
+  const setSide = s => {
+    side = s; sellExact = null; $("#amt").value = "";
+    $$(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.side === s));
+    $("#amtUnit").textContent = s === "buy" ? "ETH" : symShort;
+    const btn = $("#tradeBtn"); btn.className = "btn big wide " + s; btn.textContent = s === "buy" ? "Buy" : "Sell";
+    drawQuick(); drawEst();
+  };
+  const loadBalances = async () => {
+    if (!$("#balEth")) return;
+    if (!state.account) { $("#balEth").textContent = ""; $("#balTok").textContent = ""; balEth = balTok = null; return; }
+    try {
+      [balEth, balTok] = await rpc(p => Promise.all([p.getBalance(state.account), erc(addr, p).balanceOf(state.account)]));
+      if (!$("#balEth")) return;
+      $("#balEth").textContent = `Wallet: ${eth(balEth)} ETH`;
+      $("#balTok").textContent = `${num(Number(ethers.formatEther(balTok)))} ${symShort}`;
+      drawEst();
+    } catch (e) {}
+  };
+  const refresh = async () => {
+    try { const n = await loadToken(addr); t.pool = n.pool; if ($("#stats")) { drawStats(); drawEst(); } } catch (e) {}
+    await loadBalances();
+  };
+  $$(".tabs button").forEach(b => b.onclick = () => setSide(b.dataset.side));
+  $("#amt").addEventListener("input", () => { sellExact = null; drawEst(); });
+  $("#slip").addEventListener("input", drawEst);
+  $("#tradeBtn").onclick = async () => {
+    if (!state.account) return openWalletModal();
+    const a = amtWei();
+    if (a <= 0n) return toast("Enter an amount first", "err");
+    const btn = $("#tradeBtn"); btn.disabled = true;
+    try {
+      await refresh();
+      if (side === "buy") {
+        const min = calcBuy(t.pool, a) * (BPS - slipBps()) / BPS;
+        await runTx("Buy", s => lp(s).buy(addr, min, { value: a }));
+      } else {
+        const r = calcSell(t.pool, a);
+        if (r === null) throw new Error("not enough eth");
+        const min = r.out * (BPS - slipBps()) / BPS;
+        const allowance = await rpc(p => erc(addr, p).allowance(state.account, CONFIG.contract));
+        if (allowance < a) await runTx("Approve", s => erc(addr, s).approve(CONFIG.contract, a));
+        await runTx("Sell", s => lp(s).sell(addr, a, min));
+      }
+      if ($("#amt")) $("#amt").value = "";
+      sellExact = null;
+      await refresh();
+      loadTrades();
+    } catch (e) {
+      if (/not enough eth/.test(e?.message || "")) toast(errMsg(e), "err");
+    } finally { if ($("#tradeBtn")) { btn.disabled = false; drawEst(); } }
+  };
+
+  const loadTrades = async () => {
+    let logs;
+    try { logs = await scanLogs({ topic0: iface.getEvent("Trade").topicHash, topic1: topicAddr(addr), topic0_1_opr: "and" }); }
+    catch (e) {
+      if ($("#chart")) $("#chart").innerHTML = `<p class="fine">Price history is unavailable right now.</p>`;
+      if ($("#trades")) $("#trades").innerHTML = `<p class="fine">Trade history is unavailable right now.</p>`;
+      return;
+    }
+    if (!$("#trades")) return;
+    const V = await vStart().catch(() => 10n ** 18n);
+    const pts = [{ ts: t.pool.createdAt, p: Number(V) / Number(SUPPLY) }].concat(logs.map(l => ({ ts: l.ts, p: Number(l.ev.args.vEth) / Number(l.ev.args.vToken) })));
+    drawChart(pts);
+    if (!logs.length) { $("#trades").innerHTML = `<p class="fine">No trades yet. Be the first to buy.</p>`; return; }
+    const rows = logs.slice(-40).reverse().map(l => {
+      const a = l.ev.args;
+      return `<tr><td class="${a.isBuy ? "b" : "s"}">${a.isBuy ? "Buy" : "Sell"}</td>
+        <td><a href="${explorer("address", a.trader)}" target="_blank" rel="noopener noreferrer">${short(a.trader)}</a></td>
+        <td class="num">${eth(a.ethAmount)} ETH</td>
+        <td class="num">${num(Number(ethers.formatEther(a.tokenAmount)))}</td>
+        <td><a href="${explorer("tx", l.tx)}" target="_blank" rel="noopener noreferrer">${ago(l.ts)}</a></td></tr>`;
+    }).join("");
+    $("#trades").innerHTML = `<table class="trades"><thead><tr><th>Type</th><th>Trader</th><th>ETH</th><th>${esc(symShort)}</th><th>When</th></tr></thead><tbody>${rows}</tbody></table>`;
+  };
+
+  drawStats(); setSide("buy"); loadBalances(); loadTrades();
+  state.timer = setInterval(() => { if (!document.hidden) refresh(); }, 20000);
+}
+function drawChart(pts) {
+  const el = $("#chart"); if (!el) return;
+  if (pts.length < 2) { el.innerHTML = `<p class="fine">The chart appears after the first trade.</p>`; return; }
+  const W = 600, H = 200, pad = 6;
+  const ps = pts.map(x => x.p), lo = Math.min(...ps), hi = Math.max(...ps);
+  const span = hi - lo || hi || 1;
+  const xs = i => pad + (W - 2 * pad) * (i / (pts.length - 1));
+  const ys = p => H - pad - (H - 2 * pad) * ((p - lo) / span);
+  const line = pts.map((x, i) => `${i ? "L" : "M"}${xs(i).toFixed(1)} ${ys(x.p).toFixed(1)}`).join(" ");
+  const area = `${line} L${xs(pts.length - 1).toFixed(1)} ${H} L${xs(0).toFixed(1)} ${H} Z`;
+  const chg = (pts[pts.length - 1].p / pts[0].p - 1) * 100;
+  el.innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Price history"><path class="ar" d="${area}"/><path class="ln" d="${line}"/></svg>
+  <div class="chart-meta"><span>Low ${num(lo)} ETH</span><span class="${chg >= 0 ? "b" : "s"}">${chg >= 0 ? "+" : ""}${chg.toFixed(1)}% since launch</span><span>High ${num(hi)} ETH</span></div>`;
+}
+
+async function renderEarnings() {
+  if (!state.account) {
+    app.innerHTML = `<h1 class="page-title">Earnings</h1><p class="lede">Connect the wallet you created tokens with to see and claim your creator fees.</p><button class="btn primary big" id="ecBtn">Connect wallet</button>`;
+    $("#ecBtn").onclick = openWalletModal;
+    return;
+  }
+  app.innerHTML = `
+  <section>
+    <h1 class="page-title">Earnings</h1>
+    <p class="lede">Fees from trades of your tokens collect here until you claim them.</p>
+    <div class="panel">
+      <h3>Your creator fees</h3>
+      <div class="big-num num" id="myFees">…</div>
+      <button class="btn primary" id="claimMine" disabled>Claim to my wallet</button>
+    </div>
+    <div class="panel" id="mkPanel" hidden>
+      <h3>Marketplace fees</h3>
+      <div class="big-num num" id="mkFees">…</div>
+      <p class="fine" id="mkWallet" style="margin-bottom:14px"></p>
+      <button class="btn primary" id="claimMk" disabled>Send to fee wallet</button>
+    </div>
+    <div class="panel"><h3>Tokens you created</h3><div id="myTokens" class="grid"><p class="fine">Loading…</p></div></div>
+  </section>`;
+  const acct = state.account;
+  const drawFees = async () => {
+    try {
+      const [mine, mk, fw, owner] = await rpc(p => { const c = lp(p); return Promise.all([c.creatorFeesOwed(acct), c.platformFeesOwed(), c.feeWallet(), c.owner()]); });
+      if (!$("#myFees")) return;
+      $("#myFees").textContent = eth(mine) + " ETH";
+      $("#claimMine").disabled = mine === 0n;
+      if ([fw, owner].map(a => a.toLowerCase()).includes(acct.toLowerCase())) {
+        $("#mkPanel").hidden = false;
+        $("#mkFees").textContent = eth(mk) + " ETH";
+        $("#mkWallet").textContent = "Fee wallet: " + fw;
+        $("#claimMk").disabled = mk === 0n;
+      }
+    } catch (e) { if ($("#myFees")) $("#myFees").textContent = "Couldn't load"; }
+  };
+  $("#claimMine").onclick = async () => { $("#claimMine").disabled = true; try { await runTx("Claim fees", s => lp(s).claimCreatorFees()); } catch (e) {} drawFees(); };
+  $("#claimMk").onclick = async () => { $("#claimMk").disabled = true; try { await runTx("Send marketplace fees", s => lp(s).claimPlatformFees()); } catch (e) {} drawFees(); };
+  drawFees();
+  try {
+    const logs = await scanLogs({ topic0: iface.getEvent("TokenCreated").topicHash, topic2: topicAddr(acct), topic0_2_opr: "and" });
+    const items = await loadTokens(logs.map(l => l.ev.args.token).reverse());
+    const box = $("#myTokens"); if (!box) return;
+    box.innerHTML = items.length ? items.map(cardHTML).join("") : `<div class="empty" style="grid-column:1/-1"><b>No tokens yet</b><a href="#/create">Create your first token</a></div>`;
+    hydrateImages(box);
+  } catch (e) { const box = $("#myTokens"); if (box) box.innerHTML = `<p class="fine">Couldn't load your tokens right now.</p>`; }
+}
+
+async function loadEthUsd() {
+  try {
+    const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd");
+    const j = await r.json();
+    if (j?.ethereum?.usd) state.ethUsd = j.ethereum.usd;
+  } catch (e) {}
+}
+
+function boot() {
+  if (typeof ethers === "undefined") {
+    app.innerHTML = `<div class="empty"><b>The page didn't load fully</b>Check your connection and reload.</div>`;
+    return;
+  }
+  document.title = CONFIG.siteName + " | Robinhood Chain";
+  $("#brandName").textContent = CONFIG.siteName;
+  $("#contractLink").href = explorer("address", CONFIG.contract);
+  initChain();
+  $("#wmClose").onclick = closeWalletModal;
+  $("#walletModal").addEventListener("click", e => { if (e.target.id === "walletModal") closeWalletModal(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeWalletModal(); });
+  window.addEventListener("eip6963:announceProvider", ev => {
+    const d = ev.detail; if (!d || !d.info || !d.provider) return;
+    walletMap.set(d.info.uuid, d);
+    if (!$("#walletModal").hidden) renderWalletList();
+  });
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  window.addEventListener("hashchange", route);
+  renderWallet();
+  route();
+  loadEthUsd();
+  setTimeout(async () => {
+    const saved = load("lp_wallet"); if (!saved) return;
+    const w = walletOptions().find(x => x.info.rdns === saved); if (!w) return;
+    try { const a = await w.provider.request({ method: "eth_accounts" }); if (a && a[0]) setConnected(w, a[0]); } catch (e) {}
+  }, 500);
+}
+boot();
+</script>
+</body>
+</html>
